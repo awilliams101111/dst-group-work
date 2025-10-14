@@ -1,0 +1,110 @@
+---
+title: "Untitled"
+output: html_document
+date: "2025-10-06"
+---
+# NOT COMMENTED YET - TOO LAZY
+```{r}
+setwd("/Users/ezranwobodo/Downloads")
+data = read.csv("housing.csv")
+
+library(mgcv)
+library(mgcViz)
+```
+
+```{r}
+summary(data)
+data = filter(data, is.na(total_bedrooms) == FALSE)
+data = transform(data, avg_rooms = total_rooms/households)
+data = transform(data, avg_bedrooms = total_bedrooms/households)
+data = transform(data, pop_per_house = population/households)
+```
+
+```{r}
+plot(data$pop_per_house,data$median_house_value)
+plot(data$avg_rooms,data$median_house_value)
+hist(data$housing_median_age,breaks=seq(0,52,l=53))
+```
+
+```{r}
+data = filter(data, pop_per_house < 30)
+data = filter(data, avg_rooms <30)
+data = filter(data, housing_median_age<52)
+n=nrow(data)
+```
+
+
+```{r}
+plot(data$median_income,data$median_house_value)
+
+expensive = filter(data, median_house_value==500001)
+data = filter(data, median_house_value != 500001)
+```
+
+```{r}
+m1 = gamV(median_house_value ~ s(median_income,k=4), data=data, aViz = list(nsim = 50))
+
+print(plot(m1), pages = 1)
+plot(data$median_income,data$median_house_value)
+```
+
+```{r}
+m1 = gamV(median_house_value ~ s(total_rooms), data=data, aViz = list(nsim = 50))
+
+print(plot(m1), pages = 1)
+```
+
+```{r}
+m1 = gamV(median_house_value ~ s(avg_rooms,k=2), data=data, aViz = list(nsim = 50))
+
+print(plot(m1), pages = 1)
+plot(data$avg_rooms,data$median_house_value)
+```
+```{r}
+sample = sample <- sample.int(n = n, size = floor(.75*n), replace = F)
+train = data[sample,]
+test = data[-sample,]
+```
+
+```{r}
+library(MASS)
+null = lm(median_house_value ~ 1,data=train)
+full = lm(median_house_value ~ median_income + avg_rooms + population + households + total_rooms + total_bedrooms + housing_median_age + ocean_proximity, data=train)
+step(null, scope=list(lower=null,upper=full),direction="forward")
+```
+
+```{r}
+m1 = full
+m1_test_MSE = sum((predict(m1,test) - test$median_house_value)^2)
+m1_test_MAE = sum(abs(predict(m1,test) - test$median_house_value))
+
+m1_test_MSE
+m1_test_MAE
+```
+```{r}
+m2 = gam(median_house_value ~ s(median_income,k=4) + avg_rooms + population + households + total_rooms + total_bedrooms + housing_median_age + ocean_proximity, data=train)
+
+m2_test_MSE = sum((predict(m2,test) - test$median_house_value)^2)
+m2_test_MAE = sum(abs(predict(m2,test) - test$median_house_value))
+
+m2_test_MSE
+m2_test_MAE
+```
+```{r}
+m3 = gam(median_house_value ~ s(median_income,k=4) + ocean_proximity, data=train)
+
+m3_test_MSE = sum((predict(m3,test) - test$median_house_value)^2)
+m3_test_MAE = sum(abs(predict(m3,test) - test$median_house_value))
+
+m3_test_MSE
+m3_test_MAE
+```
+```{r}
+m4 = gam(median_house_value ~ s(median_income,k=4) + avg_rooms + population + households + s(total_rooms,k=3) + total_bedrooms + housing_median_age + ocean_proximity, data=train)
+
+m4_test_MSE = sum((predict(m4,test) - test$median_house_value)^2)
+m4_test_MAE = sum(abs(predict(m4,test) - test$median_house_value))
+
+m4_test_MSE
+m4_test_MAE
+```
